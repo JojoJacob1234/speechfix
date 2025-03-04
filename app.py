@@ -11,7 +11,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Load trained CNN-LSTM model
-MODEL_PATH = r"C:\Users\chinn\OneDrive\Desktop\mainpro\my_model (1).keras"
+MODEL_PATH = "./speech.keras"
   # Change this if your model path is different
 model = tf.keras.models.load_model(MODEL_PATH)
 
