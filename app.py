@@ -6,13 +6,19 @@ from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
 
+# Disable GPU to prevent CUDA errors (useful for Render)
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)
 
 # Load trained CNN-LSTM model
 MODEL_PATH = "./speech.keras"
-  # Change this if your model path is different
+
+if not os.path.exists(MODEL_PATH):
+    raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+
 model = tf.keras.models.load_model(MODEL_PATH)
 
 # Function to extract MFCC, pitch, RMS, and speaking rate
@@ -38,21 +44,16 @@ def extract_features(wav_file_name):
     return features
 
 # API Route for Emotion & Confidence Prediction
-# ...existing code...
-
 @app.route("/predict", methods=["POST"])
 def predict():
     if "file" not in request.files:
-        print("No file in request")
         return jsonify({"error": "No file uploaded"}), 400
 
     file = request.files["file"]
     if file.filename == "":
-        print("No file selected")
         return jsonify({"error": "No selected file"}), 400
 
-    print(f"Received file: {file.filename}")  # Debugging print
-
+    # Save the uploaded file
     filename = secure_filename(file.filename)
     filepath = os.path.join("uploads", filename)
     os.makedirs("uploads", exist_ok=True)
@@ -71,7 +72,7 @@ def predict():
     # Convert predictions to percentage probabilities
     emotion_probs = {label: round(float(prob) * 100, 2) for label, prob in zip(emotion_labels, predictions[:-1])}
 
-    # 🔥 Normalize emotion probabilities to sum to 100%
+    # Normalize emotion probabilities to sum to 100%
     total = sum(emotion_probs.values())
     if total > 0:
         emotion_probs = {k: round((v / total) * 100, 2) for k, v in emotion_probs.items()}
@@ -92,9 +93,7 @@ def predict():
         "confidence_level": confidence_level
     })
 
-
-# ...existing code...
 # Run Flask app
 if __name__ == "__main__":
-    app.run(debug=True, host="localhost", port=5000)
-    print("Server is running on http://localhost:5000/")
+    port = int(os.environ.get("PORT", 10000)) 
+    app.run(host="0.0.0.0", port=port, debug=True)
